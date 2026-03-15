@@ -1,35 +1,26 @@
+import 'dotenv/config'
 import express from 'express'
-import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@as-integrations/express4';
-// Q) Why is prisma a dev-dependency and not a dependency (ask in claude)
+import createApolloGraphqlServer from './graphql/index.js'
+import { connectToPostgreSQL } from '../db/db.js';
 
 async function init() {
     const app= express()
     const PORT= Number(process.env.PORT) || 8000
 
+    
+    await connectToPostgreSQL()
+    console.log("db connected successfully")
+
     app.use(express.json())
 
-    // Create GraphQL Server
-    const server = new ApolloServer({
-    typeDefs: `
-        type Query {
-            hello: String
-        }
-    `,
-    resolvers: {
-        Query: {
-            hello: () => 'Hey I am GraphQL server'
-        }
-    },
-    });
-
-    await server.start();
+    const gqlServer= await createApolloGraphqlServer()
 
     app.get("/", (req, res) => {
         res.json({message: "Health, OKK!"})
     })
 
-    app.use('/graphql', expressMiddleware(server))
+    app.use('/graphql', expressMiddleware(gqlServer))
 
     app.listen(PORT, () => console.log("Server Started"))
 }
