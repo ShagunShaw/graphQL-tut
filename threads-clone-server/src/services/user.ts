@@ -25,12 +25,11 @@ class UserService {
         const hashedPassword= createHmac('sha256', salt).update(password).digest('hex')
         console.log("reached here")
         const rows= await client.query(
-            "INSERT INTO users (id, first_name, last_name, profile_image_url, email, password, salt) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-            [2564, firstName, lastName, profileURL, email, hashedPassword, salt]
+            "INSERT INTO users (first_name, last_name, profile_image_url, email, password, salt) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+            [firstName, lastName, profileURL, email, hashedPassword, salt]
         );
-        console.log(rows)
 
-        return rows[0].id.toString();          // Check this
+        return rows.rows[0].id.toString();         
     }
 
     private static async getUserByEmail(email: string)
@@ -60,7 +59,7 @@ class UserService {
         if(userHashedPassword !== user.password)    throw new Error('Incorrect Password')
 
         // generate a token
-        const token= JWT.sign({ id: user.id, email: user.email }, JWT_SECRET)
+        const token= JWT.sign({ id: user.id, email: user.email }, JWT_SECRET, {expiresIn: '1h'})
         return token
     }
 
@@ -73,7 +72,16 @@ class UserService {
             [id]
         )
 
-        return rows[0]
+        const result= {
+            ...rows[0],
+            id: rows[0].id,
+            firstName: rows[0].first_name,
+            lastName: rows[0].last_name,
+            email: rows[0].email,
+            profileImageURL: rows[0].profile_image_url
+        }
+
+        return result
     }
 }
 
