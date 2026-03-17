@@ -1,4 +1,4 @@
-// import { prismaClient } from "../lib/db.js"
+import { client } from '../../db/db.js'
 import {createHmac, randomBytes} from 'node:crypto'
 import JWT from 'jsonwebtoken'
 
@@ -18,30 +18,28 @@ export interface GetUSerTokenPayload {
 const JWT_SECRET= process.env.JWT_SECRET
 
 class UserService {
-    public static createUser(payload: CreateUserPayload) {
-        const {firstName, lastName, email, password, profileURL} = payload
+    public static async createUser(payload: CreateUserPayload) {
+        const {firstName, lastName, email, password} = payload
+        const profileURL = payload.profileURL || "NULL"
         const salt= randomBytes(32).toString('hex');
         const hashedPassword= createHmac('sha256', salt).update(password).digest('hex')
+        console.log("reached here")
+        const rows= await client.query(
+            "INSERT INTO users (id, first_name, last_name, profile_image_url, email, password, salt) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            [2564, firstName, lastName, profileURL, email, hashedPassword, salt]
+        );
+        console.log(rows)
 
-        // return prismaClient.user.create({
-        //     data: {
-        //         firstName,
-        //         lastName,
-        //         email,
-        //         salt,
-        //         password: hashedPassword,
-        //         profileImageURL: profileURL || "NIL"
-        //     }
-        // });
-        return "hello";
+        return rows[0].id.toString();          // Check this
     }
 
-    private static getUserByEmail(email: string)
+    private static async getUserByEmail(email: string)
     {
-        // return prismaClient.user.findUnique({
-        //     where: {email}
-        // })
-        return "hello"
+        const { rows }= await client.query("SELECT * FROM users WHERE email= $1 ",
+            [email]
+        )
+
+        return rows[0]
     }
 
     private static generateHash(salt: string, password: string)
@@ -52,19 +50,30 @@ class UserService {
 
     public static async getUserToken(payload: GetUSerTokenPayload) {
         const {email, password} = payload
-        // const user= await this.getUserByEmail(email)
+        const user= await this.getUserByEmail(email)
 
-        // if(!user)   throw new Error('user not found')
+        if(!user)   throw new Error('user not found')
 
-        // const userSalt= user.salt
-        // const userHashedPassword= this.generateHash(userSalt, password)
+        const userSalt= user.salt
+        const userHashedPassword= this.generateHash(userSalt, password)
 
-        // if(userHashedPassword !== user.password)    throw new Error('Incorrect Password')
+        if(userHashedPassword !== user.password)    throw new Error('Incorrect Password')
 
-        // // generate a token
-        // const token= JWT.sign({ id: user.id, email: user.email }, JWT_SECRET)
-        // return token
-        return "hello"
+        // generate a token
+        const token= JWT.sign({ id: user.id, email: user.email }, JWT_SECRET)
+        return token
+    }
+
+    public static decodeJWTToken(token: string) {
+        return JWT.verify(token, JWT_SECRET)
+    }
+
+    public static async getUserByID(id) {
+        const { rows }= await client.query("SELECT * FROM users WHERE id= $1 ",
+            [id]
+        )
+
+        return rows[0]
     }
 }
 

@@ -1,11 +1,12 @@
 import express from 'express'
 import { ApolloServer } from '@apollo/server'
 import cors from 'cors'
-import { expressMiddleware } from '@apollo/server/express4'
+import { expressMiddleware } from '@apollo/server/express4'         // Sirf yhi wala use krna with the same version as you are using now, coz baki sb mei gdbd h
 import axios from 'axios'
 
 async function startServer() {
     const app= express();
+    // Dont forget the sequence in GraphQL, phle create server, then server.start(), then app.use(express.json()) and then app.use("/grphql", ....)
     const server= new ApolloServer({
         typeDefs: `
             type User {

@@ -1,10 +1,13 @@
 import { ApolloServer } from "@apollo/server";
 import { User } from "./user/index.js"; 
+import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 
-export default async function createApolloGraphqlServer() {
+export default async function createApolloGraphqlServer(httpServer) {
     // Create GraphQL Server
     const server = new ApolloServer({
     typeDefs: `
+        ${User.typeDefs}
+
         type Query {
             ${User.queries}
         }
@@ -20,6 +23,7 @@ export default async function createApolloGraphqlServer() {
             ...User.resolvers.mutations
         }
     },
+    plugins: [ApolloServerPluginDrainHttpServer({ httpServer })]
     });
 
     await server.start();
